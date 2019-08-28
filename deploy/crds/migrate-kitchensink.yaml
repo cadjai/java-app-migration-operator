@@ -1,0 +1,16 @@
+apiVersion: rhtconsulting.eapquickstarts.dev/v1alpha1
+kind: AppMigration 
+metadata:
+  name: kitchensink-appmigration
+spec:
+  # Add fields here
+  _appmigration_state: present
+  _appmigration_namespace: eap6-kitchensink
+  _appmigration_namespace_new: eap7-kitchensink
+  _appmigration_name: kitchensink
+  _appmigration_runtime_image: registry.redhat.io/kitchensink-6/eap64-openshift
+  _appmigration_runtime_image_tag: latest
+  _appmigration_runtime_image_new: registry.redhat.io/jboss-eap-7/eap72-openshift
+  _appmigration_runtime_image_tag_new: latest
+  _appmigration_exported_resources_dir: "$HOME"
+  #_appmigration_exported_resources_dir: "/tmp"

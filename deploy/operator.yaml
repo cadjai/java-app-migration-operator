@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-migration-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: app-migration-operator
+  template:
+    metadata:
+      labels:
+        name: app-migration-operator
+    spec:
+      serviceAccountName: app-migration-operator
+      containers:
+        - name: ansible
+          command:
+          - /usr/local/bin/ao-logs
+          - /tmp/ansible-operator/runner
+          - stdout
+          # Replace this with the built image name
+          image: "quay.io/cadjai/app-migration-operator:v0.0.1"
+          imagePullPolicy: "Always"
+          volumeMounts:
+          - mountPath: /tmp/ansible-operator/runner
+            name: runner
+            readOnly: true
+        - name: operator
+          # Replace this with the built image name
+          image: "quay.io/cadjai/app-migration-operator:v0.0.1"
+          imagePullPolicy: "Always"
+          volumeMounts:
+          - mountPath: /tmp/ansible-operator/runner
+            name: runner
+          env:
+            - name: ANSIBLE_VERBOSITY
+              value: "4"
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "app-migration-operator"
+      volumes:
+        - name: runner
+          emptyDir: {}

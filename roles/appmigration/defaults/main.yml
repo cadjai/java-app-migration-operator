@@ -1,0 +1,14 @@
+---
+# defaults file for appmigration
+_appmigration_state: present
+_appmigration_namespace: eap6-kitchensink
+_appmigration_namespace_new: eap7-kitchensink
+_appmigration_name: kitchensink
+_appmigration_runtime_image: registry.redhat.io/jboss-eap-6/eap64-openshift 
+_appmigration_runtime_image_tag: latest 
+_appmigration_runtime_image_new: registry.redhat.io/jboss-eap-7/eap72-openshift
+_appmigration_runtime_image_tag_new: latest 
+_appmigration_exported_resources_dir: "$HOME" 
+#_appmigration_exported_resources_dir: "/tmp" 
+_appmigration_binary_resources_dir: "/deployments"    
+_appmigration_app_container_config_resources_dir: "/opt/eap/standalone/configuration"

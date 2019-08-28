@@ -1,0 +1,7 @@
+apiVersion: rhtconsulting.eapquickstarts.dev/v1alpha1
+kind: AppMigration
+metadata:
+  name: example-appmigration
+spec:
+  # Add fields here
+  size: 3

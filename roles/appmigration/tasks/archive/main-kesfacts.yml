@@ -1,0 +1,166 @@
+---
+#- name: Lookup All Secrets 
+#  k8s_facts:
+#    api_version: v1
+#    kind: Secret
+#    namespace: "{{ _appmigration_namespace }}"
+#    api_key: "Q46RqjV9RiSaNnggHy-5Lh0KBd04CTvoFamndKiEm-Q"
+#    username: claude
+##    field_selectors:
+##      - name not in (default, deployer, builder, -token)
+#  register: current_secrets
+#
+#- name: Print list of Secrets
+#  debug:
+#    var: item
+#  with_items:
+#    - current_secrets.resources   
+
+#- name: Lookup All ServiceAccounts 
+#  k8s_facts:
+#    api_version: v1
+#    kind: ServiceAccount
+#    namespace: "{{ _appmigration_namespace }}"
+#    api_key: "Q46RqjV9RiSaNnggHy-5Lh0KBd04CTvoFamndKiEm-Q"
+#    username: claude
+##    field_selectors:
+##      - name not in (default, deployer, builder, -token)
+#  register: current_sas
+#
+#- name: Print list of ServiceAccounts
+#  debug:
+#    var: item
+#  with_items:
+#    - current_sas.resources   
+
+- name: Lookup All ConfigMaps 
+  k8s_facts:
+    api_version: v1
+    kind: ConfigMap 
+    namespace: "{{ _appmigration_namespace }}"
+    api_key: "Q46RqjV9RiSaNnggHy-5Lh0KBd04CTvoFamndKiEm-Q"
+    username: claude
+#    field_selectors:
+#      - name not in (default, deployer, builder, -token)
+  register: current_cms
+
+- name: Print list of ConfigMaps
+  debug:
+    var: item
+  with_items:
+    - current_cms.resources   
+
+- name: Lookup All RoleBindings 
+  k8s_facts:
+    api_version: v1
+    kind: RoleBinding
+    namespace: "{{ _appmigration_namespace }}"
+    api_key: "Q46RqjV9RiSaNnggHy-5Lh0KBd04CTvoFamndKiEm-Q"
+    username: claude
+#    field_selectors:
+#      - name not in (default, deployer, builder, -token)
+  register: current_rbs
+
+- name: Print list of RoleBindings
+  debug:
+    var: item
+  with_items:
+    - current_rbs.resources   
+
+- name: Lookup All Services 
+  k8s_facts:
+    api_version: v1
+    kind: Service
+    namespace: "{{ _appmigration_namespace }}"
+    api_key: "Q46RqjV9RiSaNnggHy-5Lh0KBd04CTvoFamndKiEm-Q"
+    username: claude
+#    field_selectors:
+#      - name not in (default, deployer, builder, -token)
+  register: current_secrets
+
+- name: Print list of Services
+  debug:
+    var: item
+  with_items:
+    - current_svcs.resources   
+
+- name: Lookup All DeploymentConfigs 
+  k8s_facts:
+    api_version: v1
+    kind: DeploymentConfig
+    namespace: "{{ _appmigration_namespace }}"
+    api_key: "Q46RqjV9RiSaNnggHy-5Lh0KBd04CTvoFamndKiEm-Q"
+    username: claude
+#    field_selectors:
+#      - name not in (default, deployer, builder, -token)
+  register: current_dcs
+
+- name: Print list of DeploymentConfigs
+  debug:
+    var: item
+  with_items:
+    - current_dcs.resources   
+
+- name: Lookup All Routes 
+  k8s_facts:
+    api_version: v1
+    kind: Route
+    namespace: "{{ _appmigration_namespace }}"
+    api_key: "Q46RqjV9RiSaNnggHy-5Lh0KBd04CTvoFamndKiEm-Q"
+    username: claude
+#    field_selectors:
+#      - name not in (default, deployer, builder, -token)
+  register: current_routes
+
+- name: Print list of Routes
+  debug:
+    var: item
+  with_items:
+    - current_routes.resources   
+
+- name: Lookup All ImageStreams 
+  k8s_facts:
+    api_version: v1
+    kind: ImageStream
+    namespace: "{{ _appmigration_namespace }}"
+    api_key: "Q46RqjV9RiSaNnggHy-5Lh0KBd04CTvoFamndKiEm-Q"
+    username: claude
+#    field_selectors:
+#      - name not in (default, deployer, builder, -token)
+  register: current_iss
+
+- name: Print list of ImageStreams
+  debug:
+    var: item
+  with_items:
+    - current_iss.resources   
+
+- name: Lookup All BuildConfigs 
+  k8s_facts:
+    api_version: v1
+    kind: BuildConfig
+    namespace: "{{ _appmigration_namespace }}"
+    api_key: "Q46RqjV9RiSaNnggHy-5Lh0KBd04CTvoFamndKiEm-Q"
+    username: claude
+#    field_selectors:
+#      - name not in (default, deployer, builder, -token)
+  register: current_bcs
+
+- name: Print list of Services
+  debug:
+    var: item
+  with_items:
+    - current_bcs.resources   
+
+## tasks file for jbosseapappmigration
+#- name: Include existing resource export tasks
+#  import_tasks: export-existing-k8s.yml
+#
+#- name: Include running app binary and deployment config export tasks
+#  import_tasks: export-existing-app-deployment-k8s.yml
+#
+#- name: Include exported deployment config cleaning tasks
+#  import_tasks: clean-exported-resources-k8s.yml
+#
+#- name: Include migrate app rebuild and support config tasks
+#  import_tasks: deploy-migrated-app-liftandshift-style-k8s.yml

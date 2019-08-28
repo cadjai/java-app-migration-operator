@@ -1,0 +1,131 @@
+---
+- name: Retrieve Support Resource Objects to be deployed
+  find:
+    paths:
+      - "{{ _appmigration_exported_resources_dir }}/{{ _appmigration_name }}"
+    pattern: "*.yml"
+  register: existing_support_objects
+
+- name: Print each of the resource to be created for validation
+ # debug:
+ #   var: item
+  shell: cat {{ item.path }}
+  with_items:
+    - "{{ existing_support_objects.files }}"
+  when:
+    - existing_support_objects.matched | int > 0
+    - existing_support_objects.files is defined
+  register: existing_support_objects_redeploy
+
+- name: Set exported secrets from existing App to {{ _appmigration_state }}
+  k8s:
+    state: "{{ _appmigration_state }}"
+    definition: "{{ lookup('file', item.path) | from_yaml }}"
+    namespace: "{{ _appmigration_namespace_new }}"
+  with_items:
+    - "{{ existing_support_objects.files }}"
+  when:
+    - existing_support_objects.matched | int > 0
+    - existing_support_objects.files is defined
+    - " '-secret' in item.path | basename"
+  register: existing_secrets_redeploy
+
+- name: Set Image Pull Secret Fact if present so that it can be used to link to builder SA
+  set_fact:
+    image_pull_secret: "{{ item.result.metadata.name }}"
+  with_items:
+    - "{{ existing_secrets_redeploy.results }}"
+  when:
+    - item.changed == true
+    - item.item is defined
+    - item.item.path is defined
+    - " '-secret' in item.item.path | basename "
+    - item.result is defined
+    - item.result.kind == 'Secret'
+    - item.result.metadata is defined
+    - item.result.metadata.name is defined
+
+- name: Patch the Default SA with the secret retrived above
+  shell: "kubectl patch serviceaccount default -p '{\"imagePullSecrets\": [{\"name\": \"{{ image_pull_secret }}\" }]}' -n {{ _appmigration_namespace_new }}"
+  when:
+    - image_pull_secret is defined
+    - image_pull_secret | length > 0
+  register: image_pull_secret_linked_default
+
+- name: Patch the Builder SA with the secret retrived above
+  shell: "kubectl patch serviceaccount builder -p '{\"secrets\": [{\"name\": \"{{ image_pull_secret }}\" }]}' -n {{ _appmigration_namespace_new }}"
+  when:
+    - image_pull_secret is defined
+    - image_pull_secret | length > 0
+  register: image_pull_secret_linked_builder
+
+- name: Set Remaining exported Resources from existing App to {{ _appmigration_state }}
+  k8s:
+    state: "{{ _appmigration_state }}"
+    definition: "{{ lookup('file', item.path) | from_yaml }}"
+    namespace: "{{ _appmigration_namespace_new }}"
+  with_items:
+    - "{{ existing_support_objects.files }}"
+  when:
+    - existing_support_objects.matched | int > 0
+    - existing_support_objects.files is defined
+    - " '-secret' not in item.path | basename"
+    - " '-dc.yml' not in item.path | basename"
+  register: existing_support_objects_redeploy
+
+- name: Locate the original Binary to use for the Binary build
+  find:
+    paths:
+      - "{{ _appmigration_exported_resources_dir }}/{{ _appmigration_name }}-app/{{ _appmigration_binary_resources_dir }}"
+    pattern: "*.war,*.jar.*.ear"
+  register: build_binaries
+
+- name: Build the new app using the existing binary and new image
+  shell: oc start-build {{ _appmigration_name }} --from-file={{ build_binaries.files[0].path }} --loglevel=5 -n {{ _appmigration_namespace_new }}
+  when:
+    - build_binaries.matched | int > 0
+    - build_binaries.files is defined
+    - image_pull_secret_linked_builder is defined
+    - image_pull_secret_linked_builder.rc == 0
+    - " 'patched' in image_pull_secret_linked_builder.stdout "
+  register: app_build
+
+- name: Wait to give the builder pod time to complete the build
+  when:
+    - app_build.changed | bool
+    - app_build.rc == 0
+  pause:
+    seconds: 20
+
+- name: Verify that the Build is complete
+  when:
+    - app_build.changed | bool
+    - app_build.rc == 0
+  k8s:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ _appmigration_namespace_new }}"
+    name: "{{ (app_build.stdout.split(' ')[0]).split('/')[1] }}-build"
+  register: binary_build_complete
+  until:
+  - " binary_build_complete.result.status.phase != 'Pending' "
+  - " binary_build_complete.result.status.phase == 'Succeeded' "
+  retries: 5
+  delay: 10
+  changed_when: false
+
+- name: Set exported DeploymentConfig Resource from existing App to {{ _appmigration_state }}
+  k8s:
+    state: "{{ _appmigration_state }}"
+    definition: "{{ lookup('file', item.path) | from_yaml }}"
+    namespace: "{{ _appmigration_namespace_new }}"
+  with_items:
+    - "{{ existing_support_objects.files }}"
+  when:
+    - app_build.changed | bool == true
+    - app_build.failed | bool == false
+    - app_build.rc == 0
+    - " binary_build_complete.result.status.phase == 'Succeeded' "
+    - " '-dc.yml' in item.path | basename"
+  register: migrated_app_deploy
+

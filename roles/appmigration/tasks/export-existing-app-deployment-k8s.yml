@@ -1,0 +1,93 @@
+- name: Create a Directory to export items to
+  file:
+    path: "{{ _appmigration_exported_resources_dir }}/{{ _appmigration_name }}-app"
+    state: directory
+    mode: '0777'
+  register: tmpdir
+
+- name: Create a Directory to export deployed artifact items to
+  file:
+    path: "{{ _appmigration_exported_resources_dir }}/{{ _appmigration_name }}-app/{{ item | basename }}"
+    state: directory
+    mode: '0777'
+  with_items:
+    - "{{ _appmigration_binary_resources_dir }}"
+    - "{{ _appmigration_app_container_config_resources_dir }}"
+
+- name: Lookup All ImageStreams
+  set_fact:
+    current_iss: "{{ lookup('k8s', api_versions='v1', kind='ImageStream', namespace=_appmigration_namespace) }}"
+
+- name: Save ImageStreams into temp dir
+  copy:
+    content: "{{ item | to_yaml }}"
+    dest: "{{ tmpdir.path }}/{{ item.metadata.name }}-is.yml"
+  with_items:
+    - "{{ current_iss }}"
+   # - "{{ current_iss | list }}"
+  register: saved_iss
+
+- name: Lookup All BuildConfigs
+  set_fact:
+    current_bcs: "{{ lookup('k8s', api_versions='v1', kind='BuildConfig', namespace=_appmigration_namespace) }}"
+
+- name: Save BuildConfigs into temp dir
+  copy:
+    content: "{{ item | to_yaml }}"
+    dest: "{{ tmpdir.path }}/{{ item.metadata.name }}-bc.yml"
+  with_items:
+    - "{{ current_bcs }}"
+   # - "{{ current_bcs | list }}"
+  register: saved_bcs
+
+- name: Lookup All DeploymentConfigs
+  set_fact:
+    current_dcs: "{{ lookup('k8s', api_versions='v1', kind='DeploymentConfig', namespace=_appmigration_namespace) }}"
+
+- name: Save DeploymentConfigs into temp dir
+  copy:
+    content: "{{ item | to_yaml }}"
+    dest: "{{ tmpdir.path }}/{{ item.metadata.name }}-dc.yml"
+  with_items:
+    #- "{{ current_dcs | list }}"
+    - "{{ current_dcs }}"
+  register: saved_dcs
+
+- name: Lookup Running Pod
+  set_fact:
+    #current_pods: "{{ lookup('k8s', api_versions='v1', kind='Pod', namespace=_appmigration_namespace, field_selectors='status.phase=Running') }}"
+    current_pods: "{{ lookup('k8s', api_versions='v1', kind='Pod', namespace=_appmigration_namespace) }}"
+
+- name: Print output of running Pod
+  debug:
+    var: current_pods
+
+- name: Set Running Pod fact
+  set_fact:
+    running_pod: "{{ item }}"
+  when:
+    - item.status.phase == 'Running'
+  with_items:
+    - "{{ current_pods }}"
+
+- name: Get List of artifacts running inside the Pod above
+  shell: kubectl exec -n {{ _appmigration_namespace }} "{{ running_pod.metadata.name }}" ls "{{ _appmigration_binary_resources_dir }}"
+  when:
+    - running_pod is defined
+    - current_pods | length > 0
+  register: current_artifacts
+
+- name: Print output of running artifacts
+  debug:
+    var: current_artifacts
+
+- name: Export Configuration and artifacts directories from pod
+  shell: kubectl -n {{ _appmigration_namespace }} cp {{ running_pod.metadata.name }}:{{ item }} {{ _appmigration_exported_resources_dir }}/{{ _appmigration_name }}-app/{{ item | basename }}
+  when:
+    - current_pods | length > 0
+    - running_pod is defined
+    - current_artifacts.stdout_lines | length > 0
+  with_items:
+    - "{{ _appmigration_binary_resources_dir }}"
+    - "{{ _appmigration_app_container_config_resources_dir }}"
+

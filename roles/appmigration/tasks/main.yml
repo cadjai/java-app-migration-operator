@@ -1,0 +1,24 @@
+---
+
+# tasks file for appmigration
+- name: Include existing resource export tasks
+  import_tasks: export-existing.yml  
+
+- name: Include existing exported resources cleaning tasks
+  import_tasks: clean-exported-resources.yml  
+
+- name: Include migrate app rebuild and support config tasks
+  import_tasks: deploy-migrated-app-liftandshift-style.yml  
+
+## tasks file for jbosseapappmigration
+#- name: Include existing resource export tasks
+#  import_tasks: export-existing-k8s.yml
+#
+#- name: Include running app binary and deployment config export tasks
+#  import_tasks: export-existing-app-deployment-k8s.yml
+#
+#- name: Include exported deployment config cleaning tasks
+#  import_tasks: clean-exported-resources-k8s.yml
+#
+#- name: Include migrate app rebuild and support config tasks
+#  import_tasks: deploy-migrated-app-liftandshift-style-k8s.yml

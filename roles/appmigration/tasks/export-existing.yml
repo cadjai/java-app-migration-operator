@@ -2,144 +2,74 @@
 - name: Create temp k8s object storage directory
   file:
     state: directory
-    #path: "$HOME/exported-k8s"
     path: "{{ _appmigration_exported_resources_dir }}/{{ _appmigration_name }}"
   register: tmpdir
-
-- name: Print Listing of the Temp Dir created above 1 of 2
-  shell: ls "{{ tmpdir.path }}"
-  register: tmpdir_listing
-
-- name: Print Listing of the Temp Dir created above 2 of 2 
-  debug:
-    var: tmpdir_listing
 
 - name: Lookup All Secrets 
   set_fact:
     current_secrets: "{{ lookup('k8s', api_versions='v1', kind='Secret', namespace=_appmigration_namespace) }}"
 
-- name: Prints List of looked up secrets
-  debug:
-    var: current_secrets
-
-- name: Print Filtered current secrets
-  debug: 
-    var: item
-  with_items:
-    - "{{ current_secrets | list }}"
-  when:
-    - current_secrets | length > 0 
-    - "('default' not in item.metadata.name)"
-    - "('deployer' not in item.metadata.name)"
-    - "('builder' not in item.metadata.name)"
-    - "('-token-' not in item.metadata.name)"
-    - "('-dockercfg-' not in item.metadata.name)"
-
 - name: Save Secrets into temp dir
-  copy:
-    content: "{{ item | to_yaml }}"
-    dest: "{{ tmpdir.path }}/{{ item.metadata.name }}-secret.yml"
+  shell: kubectl get secret {{ item.metadata.name }} -n {{ _appmigration_namespace }} --export -o yaml > {{ tmpdir.path }}/{{ item.metadata.name }}-secret.yml
   with_items:
-    #- "{{ current_secrets | list }}"
     - "{{ current_secrets }}"
   when:
-    - "('default' not in item.metadata.name)"
-    - "('deployer' not in item.metadata.name)"
-    - "('builder' not in item.metadata.name)"
-    - "('-token-' not in item.metadata.name)"
-    - "('-dockercfg-' not in item.metadata.name)"
+    - current_secrets | length > 0
+    - "'default' not in item.metadata.name"
+    - "'deployer' not in item.metadata.name"
+    - "'builder' not in item.metadata.name"
+    - "'-token-' not in item.metadata.name"
+    - "'-dockercfg-' not in item.metadata.name"
   register: saved_secrets
-
-- name: Print list of Secrets
-  debug:
-    var: current_secrets 
 
 - name: Lookup All ServiceAccounts 
   set_fact:
     current_sas: "{{ lookup('k8s', api_versions='v1', kind='ServiceAccount', namespace=_appmigration_namespace) }}"
 
-- name: Print list of ServiceAccounts
-  debug:
-    var: current_sas
-
 - name: Save ServiceAccounts into temp dir
-  copy:
-    content: "{{ item | to_yaml }}"
-    dest: "{{ tmpdir.path }}/{{ item.metadata.name }}-sa.yml"
+  shell: kubectl get serviceAccount {{ item.metadata.name }} -n {{ _appmigration_namespace }} --export -o yaml > {{ tmpdir.path }}/{{ item.metadata.name }}-sa.yml
   with_items:
-    #- "{{ current_sas | list }}"
     - "{{ current_sas }}"
   when:
-    - "('default' not in item.metadata.name)"
-    - "('deployer' not in item.metadata.name)"
-    - "('builder' not in item.metadata.name)"
+    - "'default' not in item.metadata.name"
+    - "'deployer' not in item.metadata.name"
+    - "'builder' not in item.metadata.name"
   register: saved_sas
-
-- name: Print Output of Exported ServiceAccounts
-  debug:
-    var: saved_sas
-
-- name: Print Saved ServiceAccounts
-  shell: cat {{ item.dest }}
-  with_items:
-    - "{{ saved_sas.results | list }}"
-  when:
-    - saved_sas.results is defined
-    - saved_sas.results | length > 0 
-    - item.dest is defined
 
 - name: Lookup All ConfigMaps 
   set_fact:
     current_cms: "{{ lookup('k8s', api_versions='v1', kind='ConfigMap', namespace=_appmigration_namespace) }}"
 
-- name: Print list of ConfigMaps
-  debug:
-    var: current_cms
-
 - name: Save ConfigMaps into temp dir
-  copy:
-    content: "{{ item | to_yaml }}"
-    dest: "{{ tmpdir.path }}/{{ item.metadata.name }}-cm.yml"
+  shell: kubectl get ConfigMap {{ item.metadata.name }} -n {{ _appmigration_namespace }} --export -o yaml > {{ tmpdir.path }}/{{ item.metadata.name }}-cm.yml
   with_items:
-    - "{{ current_cms | list }}"
-    #- "{{ current_cms }}"
+    - "{{ current_cms }}"
+  when:
+    - "'-sys-config' not in item.metadata.name"
+    - "'-ca' not in item.metadata.name"
   register: saved_cms
 
 - name: Lookup All RoleBindings 
   set_fact:
-    current_rbs: "{{ lookup('k8s', api_versions='v1', kind='RoleBinding', namespace=_appmigration_namespace) }}"
-
-- name: Print list of RoleBindings
-  debug:
-    var: current_rbs
+    current_rbs: "{{ lookup('k8s', api_versions='rbac.authorization.k8s.io/v1', kind='RoleBinding', namespace=_appmigration_namespace) }}"
 
 - name: Save RoleBindings into temp dir
-  copy:
-    content: "{{ item | to_yaml }}"
-    dest: "{{ tmpdir.path }}/{{ item.metadata.name }}-rb.yml"
+  shell: kubectl get RoleBinding {{ item.metadata.name }} -n {{ _appmigration_namespace }} -o yaml > {{ tmpdir.path }}/{{ item.metadata.name }}-rb.yml
   with_items:
-    - "{{ current_rbs | list }}"
-    #- "{{ current_rbs }}"
+    - "{{ current_rbs }}"
   when:
-    - "('admin' not in item.metadata.name)"
-    - "('deployer' not in item.metadata.name)"
-    - "('builder' not in item.metadata.name)"
+    - "'admin' not in item.metadata.name"
+    - "'deployer' not in item.metadata.name"
+    - "'builder' not in item.metadata.name"
   register: saved_rbs
 
 - name: Lookup All Services 
   set_fact:
     current_svcs: "{{ lookup('k8s', api_versions='v1', kind='Service', namespace=_appmigration_namespace) }}"
 
-- name: Print list of Services
-  debug:
-    var: current_svcs
-
 - name: Save Services into temp dir
-  copy:
-    content: "{{ item | to_yaml }}"
-    dest: "{{ tmpdir.path }}/{{ item.metadata.name }}-svc.yml"
+  shell: kubectl get Service {{ item.metadata.name }} -n {{ _appmigration_namespace }} --export -o yaml > {{ tmpdir.path }}/{{ item.metadata.name }}-svc.yml
   with_items:
-    #- "{{ current_svcs | list }}"
     - "{{ current_svcs }}"
   when:
     - item.metadata.name and item.metadata.name is defined
@@ -154,11 +84,8 @@
     var: current_routes
 
 - name: Save Routes into temp dir
-  copy:
-    content: "{{ item | to_yaml }}"
-    dest: "{{ tmpdir.path }}/{{ item.metadata.name }}-route.yml"
+  shell: kubectl get Route {{ item.metadata.name }} -n {{ _appmigration_namespace }} --export -o yaml > {{ tmpdir.path }}/{{ item.metadata.name }}-route.yml
   with_items:
-    #- "{{ current_routes | list }}"
     - "{{ current_routes }}"
   register: saved_routes
 

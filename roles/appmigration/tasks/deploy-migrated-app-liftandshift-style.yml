@@ -7,8 +7,6 @@
   register: existing_support_objects
 
 - name: Print each of the resource to be created for validation
- # debug:
- #   var: item
   shell: cat {{ item.path }}
   with_items:
     - "{{ existing_support_objects.files }}"
@@ -36,7 +34,7 @@
   with_items:
     - "{{ existing_secrets_redeploy.results }}"
   when:
-    - item.changed == true
+    - item.changed | bool 
     - item.item is defined
     - item.item.path is defined
     - " '-secret' in item.item.path | basename "
@@ -108,9 +106,8 @@
     name: "{{ (app_build.stdout.split(' ')[0]).split('/')[1] }}-build"
   register: binary_build_complete
   until:
-  - " binary_build_complete.result.status.phase != 'Pending' "
   - " binary_build_complete.result.status.phase == 'Succeeded' "
-  retries: 5
+  retries:10 
   delay: 10
   changed_when: false
 
